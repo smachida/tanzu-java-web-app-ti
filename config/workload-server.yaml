@@ -1,0 +1,53 @@
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  name: tanzu-java-web-app
+  labels:
+    apps.tanzu.vmware.com/workload-type: server
+    app.kubernetes.io/part-of: tanzu-java-web-app
+spec:
+  params:
+  - name: annotations
+    value:
+      autoscaling.knative.dev/minScale: "1"
+  - name: ports
+    value:
+    - port: 80
+      containerPort: 8080
+      name: http  
+    - port: 443
+      containerPort: 443
+      name: https
+  source:
+    git:
+      url: https://github.com/smachida/tanzu-java-web-app
+      ref:
+        branch: main
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tanzu-java-web-app
+  namespace: default
+  annotations:
+    cert-manager.io/clusger-issuer: tap-ingress-selfsigned
+    ingress.kubernetes.io/force-ssl-redirect: "false"
+    kubernetes.io/ingress.class: contour
+    kubernetes.io/tls-acme: "true"
+spec:
+  tls:
+    - secretName: tanzu-java-web-app
+      hosts:
+        - "tanzu-java-web-app.default.tap.local"
+  rules:
+    - host: "tanzu-java-web-app.default.tap.local"
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: tanzu-java-web-app
+                port:
+                  number: 80
+                
